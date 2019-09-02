@@ -1,7 +1,7 @@
 ﻿### LOCATION STACK
 
 function Add-LocationToStack {
-    <#
+<#
 .SYNOPSIS
 Adds path to the location stack
 .DESCRIPTION
@@ -53,6 +53,52 @@ If path or id is already present in $LocationStack, use <-force> to overwrite
 
     $Global:LocationStack.$id = $location
 }
+
+function Remove-LocationFromStack {
+<#
+.SYNOPSIS
+Removes path from the location stack
+.DESCRIPTION
+Removes an entry from $LocationStack hashtable, with key defined by <-id> parameter.
+Use <-force> to confirm your intent to delete.
+#>
+
+    param (
+        [string]$id = $(throw 'Mandatory parameter not provided: <id>.'),
+        [switch]$force
+    )
+
+    $ErrorActionPreference = 'Stop'
+
+    if (!$Global:LocationStack -or ($LocationStack.Count -eq 0)) {
+        Write-Warning "Location Stack is currently empty."
+        break
+    }
+
+    if ($id -match '\W') {
+        throw "Invalid ID: '$id' (allowed characters: [a-zA-Z0-9_])"
+    }
+
+    if ($id -notin $Global:LocationStack.Keys) {
+        Write-Warning "Location ID '$id' not found in the Location Stack."
+        break
+    }
+
+    if (!$force) {
+        Write-Warning "Found '$id' : '$($Global:LocationStack.$id)'."
+        Write-Warning "To delete, re-run with <-force>."
+        break
+    }
+
+    $location = $Global:LocationStack.$id
+    $Global:LocationStack.Remove($id)
+    Write-Host "Removed '$id' : '$location'"
+}
+
+
+
+
+#(ps) current progress
 
 function Show-Locations ($name, $location) { # this has iisue when run with no added locations
     if (!$Global:LocationStack) {
@@ -171,57 +217,7 @@ function Open-Location ($name, $location) {
     Remove-Variable openedLocations
 }
 
-function Remove-Location ($name, $location) {
-    
-    if ($Global:LocationStack) {
-        
-        $showHash = @{}
 
-        if (!$name -and !$location) {
-            $showHash = $Global:LocationStack.Clone()
-        }
-
-        if ($name) {
-            if ($name -match '\W') {
-                throw "Invalid ID name: '$name'."
-            } else {
-                $keys = @()
-                if ($name -is [array]) {
-                    $name | %{
-                        if ($_ -in $Global:LocationStack.Keys) {
-                            $keys += $name
-                        }
-                    }
-                } else {
-                    if ($name -in $Global:LocationStack.Keys) {
-                        $keys += $name
-                    }
-                }
-                
-                if (!$keys -and !$location) {
-                    throw ("Location ID '" + ($name -join(',')) + "' not found.")
-                }
-            }
-
-            $keys | %{$showHash.$_ = $Global:LocationStack.$_}
-        }
-    
-        if ($location) {
-            if ($location -in $Global:LocationStack.Values) {
-                $name = $Global:LocationStack.GetEnumerator().name | ?{$Global:LocationStack.$_ -eq $location}
-                $showHash.$name = $location
-            } else {
-                if (!$name) {
-                    throw ("Path '$location' not found.")
-                }
-            }
-        }
-
-        if ($showHash.count -gt 0) {
-            $showHash.GetEnumerator().name | %{$Global:LocationStack.Remove($_)}
-        }
-    }
-}
 
 function Clear-Locations ([switch]$all) {
     Remove-Variable Locations -Scope Global -ErrorAction SilentlyContinue
