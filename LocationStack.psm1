@@ -95,53 +95,71 @@ Use <-force> to confirm your intent to delete.
     Write-Host "Removed '$id' : '$location'"
 }
 
+function Show-LocationStack {
+<#
+.SYNOPSIS
+Lists paths in the location stack.
+.DESCRIPTION
+Returns $LocationStack hashtable.
+Use <-ids>(array) or <-locations>(array) to filter returned results.
+#>
 
+    param (
+        [string[]]$ids,
+        [string[]]$locations
+    )
 
+    $ErrorActionPreference = 'Stop'
 
-#(ps) current progress
-
-function Show-Locations ($name, $location) { # this has iisue when run with no added locations
-    if (!$Global:LocationStack) {
-        $Global:LocationStack = @{}
-        $Global:LocationStack.last = $PWD.Path
+    if (!$Global:LocationStack -or ($LocationStack.Count -eq 0)) {
+        Write-Warning "Location Stack is currently empty."
+        break
     }
 
     $showHash = @{}
 
-    if (!$name -and !$location) {
-        $showHash = $Global:LocationStack.Clone()
+    if ($ids) {
+
+        foreach ($id in $ids) {
+            
+            if ($id -match '[^a-zA-Z0-9_\*]') {
+                Write-Warning "Invalid ID: '$id' (allowed characters: [a-zA-Z0-9_] + wildcard '*')"
+            }
+
+            $keys = @($Global:LocationStack.Keys.GetEnumerator() | ?{$_ -like $id})
+            $keys | %{$showHash.$_ = $Global:LocationStack.$_}            
+        }
     }
 
-    if ($name) {
-        if ($name -match '\W') {
-            throw "Invalid ID name: '$name'."
-        } else {
-            $keys = @()
-            if ($name -is [array]) {
-                $name | %{
-                    if ($_ -in $Global:LocationStack.Keys) {
-                        $keys += $name
-                    }
-                }
-            } else {
-                if ($name -in $Global:LocationStack.Keys) {
-                    $keys += $name
-                }
+    if ($locations) {
+        
+        $values = @()
+
+        foreach ($location in $locations) {
+
+            $Global:LocationStack.Values.GetEnumerator() |
+            ? {$_ -like $location} |
+            % {$values += $_}
+        }
+
+        $Global:LocationStack.Keys.GetEnumerator() | %{
+            
+            if ($Global:LocationStack.$_ -in $values) {                    
+                $showHash.$_ = $Global:LocationStack.$_
             }
         }
+    }
 
-        $keys | %{$showHash.$_ = $Global:LocationStack.$_}
+    if (!$id -and !$location) {
+        $showHash = $Global:LocationStack.Clone()
     }
     
-    if ($location) {
-        if ($location -in $Global:LocationStack.Values) {
-            $name = $Global:LocationStack.GetEnumerator().name | ?{$Global:LocationStack.$_ -eq $location}
-            $showHash.$name = $location
-        }
-    }
-
     return $showHash
 }
+
+
+
+#(ps) current progress
 
 function Switch-Location ($name, $location) {
     if (!$Global:LocationStack) {
@@ -300,11 +318,12 @@ function List-SavedLocations {
     }
 }
 
-Set-Alias -Name al -Value Add-Location
+Set-Alias -Name al -Value Add-LocationToStack
+Set-Alias -Name rl -Value Remove-LocationFromStack
+Set-Alias -Name shl -Value Show-LocationStack
+
 Set-Alias -Name sw -Value Switch-Location
-Set-Alias -Name shl -Value Show-Location
 Set-Alias -Name ol -Value Open-Location
-Set-Alias -Name rl -Value Remove-Location
 Set-Alias -Name cl -Value Clear-Locations
 Set-Alias -Name svl -Value Save-Locations
 Set-Alias -Name ll -Value Load-Locations
