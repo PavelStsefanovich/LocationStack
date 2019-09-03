@@ -386,23 +386,40 @@ Parameter <-force> is required to avoid accidental replacement of current stack.
     Remove-Variable load_hash -force
 }
 
-
-
-
-#(ps) current progress
-
 function Get-LocationStack {
+<#
+.SYNOPSIS
+Lists saved location stacks.
+.DESCRIPTION
+Use <-name>(array) to filter listed stacks (accepts wildcard '*')
+#>
+
+    param (
+        [string[]]$names = @('*')
+    )
 
     $save_directory = Join-Path (Split-Path $PROFILE) 'data'
+    $stacks_list = @()
 
-    $stacks = (ls $save_directory -Filter 'locstack*.json' -ErrorAction SilentlyContinue).BaseName
+    foreach ($name in $names) {
 
-    if ($stacks) {
-        foreach ($stack in $stacks) {
-            if ($stack -eq 'locstack') {
-                Write-Host 'default'
-            } else {
-                Write-Host $stack.replace('locstack_','')
+        $filter = "locstack_$name`.json"
+        $stacks_on_disk = (ls $save_directory -Filter $filter -ErrorAction SilentlyContinue).BaseName
+
+        $stacks_on_disk | %{
+
+            if ($_ -notin $stacks_list) {
+                $stacks_list += $_
+            }
+        }
+    }
+
+    if ($stacks_list) {
+
+        $stacks_list | % {
+            
+            if ($_) {               
+                Write-Host $_.replace('locstack_','')
             }
         }
     }
