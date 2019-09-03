@@ -70,7 +70,7 @@ Use <-force> to confirm your intent to delete.
 
     $ErrorActionPreference = 'Stop'
 
-    if (!$Global:LocationStack -or ($LocationStack.Count -eq 0)) {
+    if (!$Global:LocationStack -or ($Global:LocationStack.Count -eq 0)) {
         Write-Warning "Location Stack is currently empty."
         break
     }
@@ -111,7 +111,7 @@ Use <-ids>(array) and <-locations>(array) to filter returned results (both accep
 
     $ErrorActionPreference = 'Stop'
 
-    if (!$Global:LocationStack -or ($LocationStack.Count -eq 0)) {
+    if (!$Global:LocationStack -or ($Global:LocationStack.Count -eq 0)) {
         Write-Warning "Location Stack is currently empty."
         break
     }
@@ -224,7 +224,7 @@ Use <-ids>(array) and <-locations>(array) to filter paths to open (both accept w
 
     $ErrorActionPreference = 'Stop'
 
-    if (!$Global:LocationStack -or ($LocationStack.Count -eq 0)) {
+    if (!$Global:LocationStack -or ($Global:LocationStack.Count -eq 0)) {
         Write-Warning "Location Stack is currently empty."
         break
     }
@@ -284,10 +284,16 @@ Use <-force> to delete $LocationStack hashtable completely.
         [switch]$force
     )
 
+    $ErrorActionPreference = 'Stop'
+
     if ($force) {
         Get-Variable LocationStack -Scope Global -ErrorAction SilentlyContinue | rm
     }
     else {
+
+        if (!$Global:LocationStack) {
+            break
+        }
 
         $keys_to_delete = @()
 
@@ -302,41 +308,48 @@ Use <-force> to delete $LocationStack hashtable completely.
     }    
 }
 
+function Save-LocationStack {
+<#
+.SYNOPSIS
+Saves location stack to a file.
+.DESCRIPTION
+If <-name> is not specified, location stack is saved as 'default'.
+If location stack with provided name already exists, use <-force> to confirm your intent to overwrite.
+#>
+
+    param (
+        [string]$name,
+        [switch]$force
+    )
+
+    $ErrorActionPreference = 'Stop'
+
+    if (!$Global:LocationStack -or ($Global:LocationStack.Count -eq 0)) {
+        Write-Warning "Location Stack is currently empty."
+        break
+    }
+
+    $save_directory = Join-Path (Split-Path $PROFILE) 'data'
+    mkdir $save_directory -ErrorAction SilentlyContinue | Out-Null
+    if (!$name) {$name = 'default'}
+    $filepath = Join-Path $save_directory "locstack_$name`.json"
+
+    if (Test-Path $filepath) {
+        
+        if (!$force) {
+            
+            Write-Warning "LocationStack '$name' exists on disk."
+            Write-Warning "Use <-force> to overwrite."
+            break
+        }        
+    }
+
+    $Global:LocationStack | ConvertTo-Json | Out-File $filepath -Force -ErrorAction Stop
+}
 
 
 
 #(ps) current progress
-
-function Save-LocationStack ($name, [switch]$force) {
-
-    if ($Global:LocationStack) {
-        $dataDir = Join-Path (Split-Path $PROFILE) 'data'
-        mkdir $dataDir -ErrorAction SilentlyContinue | Out-Null
-
-        if (!$name) {
-            $name = 'locstack.json'
-        } elseif ($name -ne 'default') {
-            $name = "locstack_$name`.json"
-        } else {
-            Write-Host " (!) Name can not be 'default'"
-        }
-
-        $filepath = Join-Path $dataDir $name
-
-        try {
-            if ($force) {
-                $Global:LocationStack | ConvertTo-Json | Out-File $filepath -Force -ErrorAction Stop
-            } else {
-                $Global:LocationStack | ConvertTo-Json | Out-File $filepath -NoClobber -ErrorAction Stop
-            }
-            Write-Host "Saved at: '$filepath'"
-        } catch {
-            throw $_
-        }
-    } else {
-        Write-Host ' (!) Nothing to save'
-    }
-}
 
 function Load-Locations ($name, [switch]$force) {
 
@@ -347,7 +360,7 @@ function Load-Locations ($name, [switch]$force) {
             $Global:LocationStack = @{}
         }
 
-        $dataDir = Join-Path (Split-Path $PROFILE) 'data'
+        $save_directory = Join-Path (Split-Path $PROFILE) 'data'
 
         if (!$name) {
             $name = 'locstack.json'
@@ -355,7 +368,7 @@ function Load-Locations ($name, [switch]$force) {
             $name = "locstack_$name`.json"
         }
 
-        $filepath = Join-Path $dataDir $name
+        $filepath = Join-Path $save_directory $name
     
         if (Test-Path $filepath) {
             (cat $filepath -ErrorAction Stop | ConvertFrom-Json).psobject.properties | %{ $Global:LocationStack[$_.Name] = $_.Value }
@@ -369,9 +382,9 @@ function Load-Locations ($name, [switch]$force) {
 
 function List-SavedLocations {
 
-    $dataDir = Join-Path (Split-Path $PROFILE) 'data'
+    $save_directory = Join-Path (Split-Path $PROFILE) 'data'
 
-    $stacks = (ls $dataDir -Filter 'locstack*.json' -ErrorAction SilentlyContinue).BaseName
+    $stacks = (ls $save_directory -Filter 'locstack*.json' -ErrorAction SilentlyContinue).BaseName
 
     if ($stacks) {
         foreach ($stack in $stacks) {
