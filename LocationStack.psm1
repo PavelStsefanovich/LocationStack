@@ -30,7 +30,7 @@ If path or id is already present in $LocationStack, use <-force> to overwrite
     if ($id -in $Global:LocationStack.Keys) {
 
         if (!$force) {
-            Write-Warning "Location ID '$id' exists with following path: '$($Global:LocationStack.$id)'."
+            Write-Warning "LocationStack ID '$id' exists with following path: '$($Global:LocationStack.$id)'."
             Write-Warning "Use <-force> to overwrite."
             break
         }
@@ -101,7 +101,7 @@ function Show-LocationStack {
 Lists paths in the location stack.
 .DESCRIPTION
 Returns $LocationStack hashtable.
-Use <-ids>(array) or <-locations>(array) to filter returned results.
+Use <-ids>(array) or <-locations>(array) to filter returned results (both accept wildcard '*').
 #>
 
     param (
@@ -157,33 +157,61 @@ Use <-ids>(array) or <-locations>(array) to filter returned results.
     return $showHash
 }
 
+function Switch-Location {
+<#
+.SYNOPSIS
+Changes current directory to the path in the location stack
+.DESCRIPTION
+If <-id> is specified, uses path with that ID in $LocationStack hashtable.
+If <-location> is specified, changes to that location if it can be resolved.
+Before changing location, current directory path is recorded in $LocationStack hashtable under 'last' key.
+If no parameters specified, changes location to the path defined by 'last' key in $LocationStack hashtable.
+#>
+
+    param (
+        [string]$id,
+        [string]$location
+    )
+
+    $ErrorActionPreference = 'Stop'
+
+    if ($id -and $location) {
+        throw "Both <-id> and <-location> cannot be used simultaneously."
+    }
+
+    if (!$Global:LocationStack) {
+        $Global:LocationStack = @{ }
+    }
+
+    if ($id) {
+
+        if ($id -match '\W') {
+            throw "Invalid ID: '$id' (allowed characters: [a-zA-Z0-9_])"
+        }
+
+        if ($id -in $Global:LocationStack.Keys) {
+            $location = $Global:LocationStack.$id
+        }
+        else {
+            throw "Location ID '$id' not found in the Location Stack."
+        }
+    }
+
+    if (!$location) {
+        $location = $Global:LocationStack.last
+    }
+
+    if ($location) {
+        
+        $location = (Resolve-Path $location).Path
+        $Global:LocationStack.last = $PWD.Path
+        cd $location
+    }
+}
+
 
 
 #(ps) current progress
-
-function Switch-Location ($name, $location) {
-    if (!$Global:LocationStack) {
-        $Global:LocationStack = @{}
-        $Global:LocationStack.last = $PWD.Path
-    }
-
-    if ($name) {
-        if (!$location) {
-            if ($name -in $Global:LocationStack.Keys) {
-                $location = $Global:LocationStack.$name
-            } else {
-                throw "Location ID '$name' not found."
-            }
-        }
-    } else {
-        if (!$location) {
-            $location = $Global:LocationStack.last
-        }
-    }
-
-    $Global:LocationStack.last = $PWD.Path
-    cd $location
-}
 
 function Open-Location ($name, $location) {
     if (!$Global:LocationStack) {
@@ -318,11 +346,11 @@ function List-SavedLocations {
     }
 }
 
-Set-Alias -Name al -Value Add-LocationToStack
-Set-Alias -Name rl -Value Remove-LocationFromStack
-Set-Alias -Name shl -Value Show-LocationStack
+Set-Alias -Name als -Value Add-LocationToStack
+Set-Alias -Name rls -Value Remove-LocationFromStack
+Set-Alias -Name shls -Value Show-LocationStack
+Set-Alias -Name sl -Value Switch-Location
 
-Set-Alias -Name sw -Value Switch-Location
 Set-Alias -Name ol -Value Open-Location
 Set-Alias -Name cl -Value Clear-Locations
 Set-Alias -Name svl -Value Save-Locations
