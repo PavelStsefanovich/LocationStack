@@ -101,7 +101,7 @@ function Show-LocationStack {
 Lists paths in the location stack.
 .DESCRIPTION
 Returns $LocationStack hashtable.
-Use <-ids>(array) or <-locations>(array) to filter returned results (both accept wildcard '*').
+Use <-ids>(array) and <-locations>(array) to filter returned results (both accept wildcard '*').
 #>
 
     param (
@@ -209,67 +209,105 @@ If no parameters specified, changes location to the path defined by 'last' key i
     }
 }
 
+function Open-LocationInExplorer ($name, $location) {
+<#
+.SYNOPSIS
+Opens path(s) from the location stack in Windows Explorer.
+.DESCRIPTION
+Use <-ids>(array) and <-locations>(array) to filter paths to open (both accept wildcard '*').
+#>
+
+    param (
+        [string[]]$ids,
+        [string[]]$locations
+    )
+
+    $ErrorActionPreference = 'Stop'
+
+    if (!$Global:LocationStack -or ($LocationStack.Count -eq 0)) {
+        Write-Warning "Location Stack is currently empty."
+        break
+    }
+
+    $locations_to_open = @()
+
+    if ($ids) {
+
+        foreach ($id in $ids) {
+
+            if ($id -match '[^a-zA-Z0-9_\*]') {
+                Write-Warning "Invalid ID: '$id' (allowed characters: [a-zA-Z0-9_] + wildcard '*')"
+            }
+
+            $keys = @($Global:LocationStack.Keys.GetEnumerator() | ?{$_ -like $id})
+            $keys | %{$locations_to_open += $Global:LocationStack.$_}                
+        }
+    }
+
+    if ($locations) {
+
+        foreach ($location in $locations) {
+
+            $Global:LocationStack.Values.GetEnumerator() |
+            ? {$_ -like $location} |
+            % {$locations_to_open += $_}
+        }
+    }
+
+    if (!$ids -and !$locations) {
+        $Global:LocationStack.Values.GetEnumerator() |
+        % {$locations_to_open += $_}
+    }
+
+    $opened_locations = @()
+
+    foreach ($path in $locations_to_open) {
+
+        if ($path -notin $opened_locations) {
+
+            explorer "$path"
+            $opened_locations += $path
+        }
+    }
+}
+
+function Clear-LocationStack ([switch]$all) {
+<#
+.SYNOPSIS
+Clears location stack.
+.DESCRIPTION
+Removes all entries from $LocationStack hashtable except the one with 'last' key.
+Use <-force> to delete $LocationStack hashtable completely.
+#>
+
+    param (
+        [switch]$force
+    )
+
+    if ($force) {
+        Get-Variable LocationStack -Scope Global -ErrorAction SilentlyContinue | rm
+    }
+    else {
+
+        $keys_to_delete = @()
+
+        foreach ($key in $Global:LocationStack.Keys.GetEnumerator()) {
+            
+            if ($key -ne 'last') {
+                $keys_to_delete += $key
+            }
+        }
+
+        $keys_to_delete | % {$Global:LocationStack.Remove($_)}
+    }    
+}
+
+
 
 
 #(ps) current progress
 
-function Open-Location ($name, $location) {
-    if (!$Global:LocationStack) {
-        $Global:LocationStack = @{}
-        $Global:LocationStack.last = $PWD.Path
-    }
-
-    $openHash = @{}
-
-    if (!$name -and !$location) {
-        $openHash = $Global:LocationStack.Clone()
-    }
-
-    if ($name) {
-        if ($name -match '\W') {
-            throw "Invalid ID name: '$name'."
-        } else {
-            $keys = @()
-            if ($name -is [array]) {
-                $name | %{
-                    if ($_ -in $Global:LocationStack.Keys) {
-                        $keys += $name
-                    }
-                }
-            } else {
-                if ($name -in $Global:LocationStack.Keys) {
-                    $keys += $name
-                }
-            }
-        }
-
-        $keys | %{$openHash.$_ = $Global:LocationStack.$_}
-    }
-
-    if ($location) {
-        if ($location -in $Global:LocationStack.Values) {
-            $name = $Global:LocationStack.GetEnumerator().name | ?{$Global:LocationStack.$_ -eq $location}
-            $openHash.$name = $location
-        }
-    }
-
-    $openedLocations = @()
-    $openHash.Keys | %{
-        if ($openHash.$_ -notin $openedLocations) {
-            explorer $openHash.$_
-            $openedLocations += $openHash.$_
-        }
-    }
-    Remove-Variable openedLocations
-}
-
-
-
-function Clear-Locations ([switch]$all) {
-    Remove-Variable Locations -Scope Global -ErrorAction SilentlyContinue
-}
-
-function Save-Locations ($name, [switch]$force) {
+function Save-LocationStack ($name, [switch]$force) {
 
     if ($Global:LocationStack) {
         $dataDir = Join-Path (Split-Path $PROFILE) 'data'
@@ -350,10 +388,10 @@ Set-Alias -Name als -Value Add-LocationToStack
 Set-Alias -Name rls -Value Remove-LocationFromStack
 Set-Alias -Name shls -Value Show-LocationStack
 Set-Alias -Name sl -Value Switch-Location
+Set-Alias -Name ole -Value Open-LocationInExplorer
+Set-Alias -Name clrs -Value Clear-LocationStack
+Set-Alias -Name svls -Value Save-LocationStack
 
-Set-Alias -Name ol -Value Open-Location
-Set-Alias -Name cl -Value Clear-Locations
-Set-Alias -Name svl -Value Save-Locations
 Set-Alias -Name ll -Value Load-Locations
 Set-Alias -Name lsl -Value List-SavedLocations
 
