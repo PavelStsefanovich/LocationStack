@@ -116,7 +116,7 @@ Use <-ids>(array) and <-locations>(array) to filter returned results (both accep
         break
     }
 
-    $showHash = @{}
+    $show_hash = @{}
 
     if ($ids) {
 
@@ -127,12 +127,12 @@ Use <-ids>(array) and <-locations>(array) to filter returned results (both accep
             }
 
             $keys = @($Global:LocationStack.Keys.GetEnumerator() | ?{$_ -like $id})
-            $keys | %{$showHash.$_ = $Global:LocationStack.$_}            
+            $keys | %{$show_hash.$_ = $Global:LocationStack.$_}
         }
     }
 
     if ($locations) {
-        
+
         $values = @()
 
         foreach ($location in $locations) {
@@ -143,18 +143,18 @@ Use <-ids>(array) and <-locations>(array) to filter returned results (both accep
         }
 
         $Global:LocationStack.Keys.GetEnumerator() | %{
-            
-            if ($Global:LocationStack.$_ -in $values) {                    
-                $showHash.$_ = $Global:LocationStack.$_
+
+            if ($Global:LocationStack.$_ -in $values) {
+                $show_hash.$_ = $Global:LocationStack.$_
             }
         }
     }
 
     if (!$id -and !$location) {
-        $showHash = $Global:LocationStack.Clone()
+        $show_hash = $Global:LocationStack.Clone()
     }
     
-    return $showHash
+    return $show_hash
 }
 
 function Switch-Location {
@@ -202,7 +202,7 @@ If no parameters specified, changes location to the path defined by 'last' key i
     }
 
     if ($location) {
-        
+
         $location = (Resolve-Path $location).Path
         $Global:LocationStack.last = $PWD.Path
         cd $location
@@ -305,7 +305,7 @@ Use <-force> to delete $LocationStack hashtable completely.
         }
 
         $keys_to_delete | % {$Global:LocationStack.Remove($_)}
-    }    
+    }
 }
 
 function Save-LocationStack {
@@ -314,7 +314,7 @@ function Save-LocationStack {
 Saves location stack to a file.
 .DESCRIPTION
 If <-name> is not specified, location stack is saved as 'default'.
-If location stack with provided name already exists, use <-force> to confirm your intent to overwrite.
+If location stack with provided name already exists, use <-force> to overwrite.
 #>
 
     param (
@@ -337,50 +337,61 @@ If location stack with provided name already exists, use <-force> to confirm you
     if (Test-Path $filepath) {
         
         if (!$force) {
-            
+
             Write-Warning "LocationStack '$name' exists on disk."
             Write-Warning "Use <-force> to overwrite."
             break
-        }        
+        }
     }
 
     $Global:LocationStack | ConvertTo-Json | Out-File $filepath -Force -ErrorAction Stop
 }
 
+function Open-LocationStack {
+<#
+.SYNOPSIS
+Loads location stack from a file.
+.DESCRIPTION
+If <-name> is not specified, 'default' stack is loaded.
+Parameter <-force> is required to avoid accidental replacement of current stack.
+#>
+
+    param (
+        [string]$name,
+        [switch]$force
+    )
+
+    $ErrorActionPreference = 'Stop'
+
+    if (!$force) {
+
+        Write-Warning "(!) Re-run with '-Force' parameter to open location stack from file."
+        break
+    }
+
+    $save_directory = Join-Path (Split-Path $PROFILE) 'data'
+    if (!$name) {$name = 'default'}
+    $filepath = Join-Path $save_directory "locstack_$name`.json"
+
+    if (!(Test-Path $filepath)) {
+        throw "LocationStack '$name' not found on disk. Use Get-LocationStack to list available stacks."
+    }
+
+    $load_hash = @{}
+
+    (cat $filepath -ErrorAction Stop | ConvertFrom-Json).psobject.properties |
+    %{ $load_hash[$_.Name] = $_.Value }
+
+    $Global:LocationStack = $load_hash.Clone()
+    Remove-Variable load_hash -force
+}
+
+
 
 
 #(ps) current progress
 
-function Load-Locations ($name, [switch]$force) {
-
-    if ($force) {
-        if ($Global:LocationStack) {
-            $Global:LocationStack.Clear()
-        } else {
-            $Global:LocationStack = @{}
-        }
-
-        $save_directory = Join-Path (Split-Path $PROFILE) 'data'
-
-        if (!$name) {
-            $name = 'locstack.json'
-        } else {
-            $name = "locstack_$name`.json"
-        }
-
-        $filepath = Join-Path $save_directory $name
-    
-        if (Test-Path $filepath) {
-            (cat $filepath -ErrorAction Stop | ConvertFrom-Json).psobject.properties | %{ $Global:LocationStack[$_.Name] = $_.Value }
-        } else {
-            Write-Host " (!) File not found: '$filepath'"
-        }
-    } else {
-        Write-Host " (!) Re-run with '-Force' parameter to load location stack"
-    }
-}
-
-function List-SavedLocations {
+function Get-LocationStack {
 
     $save_directory = Join-Path (Split-Path $PROFILE) 'data'
 
@@ -404,8 +415,7 @@ Set-Alias -Name sl -Value Switch-Location
 Set-Alias -Name ole -Value Open-LocationInExplorer
 Set-Alias -Name clrs -Value Clear-LocationStack
 Set-Alias -Name svls -Value Save-LocationStack
-
-Set-Alias -Name ll -Value Load-Locations
-Set-Alias -Name lsl -Value List-SavedLocations
+Set-Alias -Name ols -Value Open-LocationStack
+Set-Alias -Name gls -Value Get-LocationStack
 
 Export-ModuleMember -Function * -Alias *
