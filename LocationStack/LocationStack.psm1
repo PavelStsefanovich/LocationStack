@@ -1,5 +1,4 @@
-﻿### LOCATION STACK
-
+﻿
 function Add-LocationToStack {
 <#
 .SYNOPSIS
@@ -8,6 +7,8 @@ Adds path to the location stack
 Adds a directory path specified by <-location> parameter to $LocationStack hashtable, with key defined by <-id> parameter.
 If path is not specified, current directory path is used.
 If path or id is already present in $LocationStack, use <-force> to overwrite
+.LINK
+https://github.com/PavelStsefanovich/LocationStack
 #>
 
     param (
@@ -61,6 +62,8 @@ Removes path from the location stack
 .DESCRIPTION
 Removes an entry from $LocationStack hashtable, with key defined by <-id> parameter.
 Use <-force> to confirm your intent to delete.
+.LINK
+https://github.com/PavelStsefanovich/LocationStack
 #>
 
     param (
@@ -102,6 +105,8 @@ Lists paths in the location stack.
 .DESCRIPTION
 Returns $LocationStack hashtable.
 Use <-ids>(array) and <-locations>(array) to filter returned results (both accept wildcard '*').
+.LINK
+https://github.com/PavelStsefanovich/LocationStack
 #>
 
     param (
@@ -166,6 +171,8 @@ If <-id> is specified, uses path with that ID in $LocationStack hashtable.
 If <-location> is specified, changes to that location if it can be resolved.
 Before changing location, current directory path is recorded in $LocationStack hashtable under 'last' key.
 If no parameters specified, changes location to the path defined by 'last' key in $LocationStack hashtable.
+.LINK
+https://github.com/PavelStsefanovich/LocationStack
 #>
 
     param (
@@ -217,6 +224,8 @@ function Open-LocationInExplorer {
 Opens path(s) from the location stack in Windows Explorer.
 .DESCRIPTION
 Use <-ids>(array) and <-locations>(array) to filter paths to open (both accept wildcard '*').
+.LINK
+https://github.com/PavelStsefanovich/LocationStack
 #>
 
     param (
@@ -280,6 +289,8 @@ Clears location stack.
 .DESCRIPTION
 Removes all entries from $LocationStack hashtable except the one with 'last' key.
 Use <-force> to delete $LocationStack hashtable completely.
+.LINK
+https://github.com/PavelStsefanovich/LocationStack
 #>
 
     param (
@@ -317,6 +328,8 @@ Saves location stack to a file.
 .DESCRIPTION
 If <-name> is not specified, location stack is saved as 'default'.
 If location stack with provided name already exists, use <-force> to overwrite.
+.LINK
+https://github.com/PavelStsefanovich/LocationStack
 #>
 
     param (
@@ -360,6 +373,8 @@ Loads location stack from a file.
 .DESCRIPTION
 If <-name> is not specified, 'default' stack is loaded.
 Parameter <-force> is required to avoid accidental replacement of current stack.
+.LINK
+https://github.com/PavelStsefanovich/LocationStack
 #>
 
     param (
@@ -404,6 +419,8 @@ function Get-LocationStack {
 Lists exported location stacks.
 .DESCRIPTION
 Use <-name>(array) to filter listed stacks (accepts wildcard '*')
+.LINK
+https://github.com/PavelStsefanovich/LocationStack
 #>
 
     param (
@@ -449,6 +466,8 @@ Removes exported location stack from disk.
 .DESCRIPTION
 Use mandatory <-name> parameter to specify which stack file to delete (use 'default' to remove default stack).
 Parameter <-force> is required to avoid accidental removal of stack file.
+.LINK
+https://github.com/PavelStsefanovich/LocationStack
 #>
 
     param (
