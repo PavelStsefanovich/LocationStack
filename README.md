@@ -1,8 +1,5 @@
-<# 
- .Synopsis
-  LocationStack module
+## LocationStack
 
- .Description
   This module is a replacement for PowerShell built-in Push-Location/Pop-Location cmdlets with enhanced functionality:
   - ability to add multiple locations (paths) to the stack ([hashtable]) with custom ID. 
   - ID can be used later to switch dirctly to the target location.
@@ -10,11 +7,8 @@
   - persistent location table (location record will remain after 'popping' and can be used again).
   - ability to export/import location stack hashtable into/from a file with custom name to maintain multiple stack tables.
 
- .NOTES
-  Open-source and free of charge. Feel free to modify.
-  I've written it for my own use, and it proved very helpful. Hoping that someone else will find it useful.
-  Reference to original repo is greatly appreciated (under .LINK).
+###Notes
 
- .LINK
-  https://github.com/PavelStsefanovich/LocationStack
-#>
+  Open-source and free of charge. Feel free to modify.
+  I&#39;ve written it for my own use, and it proved very helpful. Hoping that someone else will find it useful.
+  Reference to original repo is greatly appreciated.
