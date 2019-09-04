@@ -179,8 +179,9 @@ If no parameters specified, changes location to the path defined by 'last' key i
         throw "Both <-id> and <-location> cannot be used simultaneously."
     }
 
-    if (!$Global:LocationStack) {
-        $Global:LocationStack = @{ }
+    if (!$Global:LocationStack -or ($Global:LocationStack.Count -eq 0)) {
+        Write-Warning "Location Stack is currently empty."
+        break
     }
 
     if ($id) {
@@ -436,3 +437,7 @@ Set-Alias -Name ols -Value Open-LocationStack
 Set-Alias -Name gls -Value Get-LocationStack
 
 Export-ModuleMember -Function * -Alias *
+
+
+# 1. export/import instead of save/load
+# 2. ability to delete location stacks on disk
