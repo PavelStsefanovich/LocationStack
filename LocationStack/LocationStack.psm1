@@ -30,7 +30,7 @@ If path or id is already present in $LocationStack, use <-force> to overwrite
     if ($id -in $Global:LocationStack.Keys) {
 
         if (!$force) {
-            Write-Warning "LocationStack ID '$id' exists with following path: '$($Global:LocationStack.$id)'."
+            Write-Warning "Found LocationStack ID '$id' with following path: '$($Global:LocationStack.$id)'."
             Write-Warning "Use <-force> to overwrite."
             break
         }
@@ -41,7 +41,7 @@ If path or id is already present in $LocationStack, use <-force> to overwrite
         $existing_location_id = ($Global:LocationStack.GetEnumerator() | ? { $_.value -eq $location }).key
 
         if (!$force) {
-            Write-Warning "Location '$location' exists with following ID: '$existing_location_id'."
+            Write-Warning "Found '$location' with following ID: '$existing_location_id'."
             Write-Warning "Use <-force> to overwrite."
             break              
         }
@@ -194,7 +194,8 @@ If no parameters specified, changes location to the path defined by 'last' key i
             $location = $Global:LocationStack.$id
         }
         else {
-            throw "Location ID '$id' not found in the Location Stack."
+            Write-Warning "Location ID '$id' not found in the Location Stack."
+            break
         }
     }
 
@@ -309,7 +310,7 @@ Use <-force> to delete $LocationStack hashtable completely.
     }
 }
 
-function Save-LocationStack {
+function Export-LocationStack {
 <#
 .SYNOPSIS
 Saves location stack to a file.
@@ -330,6 +331,10 @@ If location stack with provided name already exists, use <-force> to overwrite.
         break
     }
 
+    if ($name -match '[^a-zA-Z0-9]') {
+        throw "Invalid name: '$name' (allowed characters: [a-zA-Z0-9])"
+    }
+
     $save_directory = Join-Path (Split-Path $PROFILE) 'data'
     mkdir $save_directory -ErrorAction SilentlyContinue | Out-Null
     if (!$name) {$name = 'default'}
@@ -339,7 +344,7 @@ If location stack with provided name already exists, use <-force> to overwrite.
         
         if (!$force) {
 
-            Write-Warning "LocationStack '$name' exists on disk."
+            Write-Warning "Found location stack '$name' on disk."
             Write-Warning "Use <-force> to overwrite."
             break
         }
@@ -348,7 +353,7 @@ If location stack with provided name already exists, use <-force> to overwrite.
     $Global:LocationStack | ConvertTo-Json | Out-File $filepath -Force -ErrorAction Stop
 }
 
-function Open-LocationStack {
+function Import-LocationStack {
 <#
 .SYNOPSIS
 Loads location stack from a file.
@@ -364,9 +369,13 @@ Parameter <-force> is required to avoid accidental replacement of current stack.
 
     $ErrorActionPreference = 'Stop'
 
+    if ($name -match '[^a-zA-Z0-9]') {
+        throw "Invalid name: '$name' (allowed characters: [a-zA-Z0-9])"
+    }
+    
     if (!$force) {
 
-        Write-Warning "(!) Re-run with '-Force' parameter to open location stack from file."
+        Write-Warning "(!) Re-run with '-Force' parameter to import location stack from file."
         break
     }
 
@@ -375,7 +384,9 @@ Parameter <-force> is required to avoid accidental replacement of current stack.
     $filepath = Join-Path $save_directory "locstack_$name`.json"
 
     if (!(Test-Path $filepath)) {
-        throw "LocationStack '$name' not found on disk. Use Get-LocationStack to list available stacks."
+        Write-Warning "LocationStack '$name' not found on disk"
+        Write-Warning "Use Get-LocationStack to list available stacks."
+        break
     }
 
     $load_hash = @{}
@@ -390,7 +401,7 @@ Parameter <-force> is required to avoid accidental replacement of current stack.
 function Get-LocationStack {
 <#
 .SYNOPSIS
-Lists saved location stacks.
+Lists exported location stacks.
 .DESCRIPTION
 Use <-name>(array) to filter listed stacks (accepts wildcard '*')
 #>
@@ -405,6 +416,11 @@ Use <-name>(array) to filter listed stacks (accepts wildcard '*')
     foreach ($name in $names) {
 
         $filter = "locstack_$name`.json"
+
+        if ($name -match '[^a-zA-Z0-9*]') {
+            Write-Warning "Invalid name: '$name' (allowed characters: [a-zA-Z0-9*])"
+        } 
+
         $stacks_on_disk = (ls $save_directory -Filter $filter -ErrorAction SilentlyContinue).BaseName
 
         $stacks_on_disk | %{
@@ -426,18 +442,77 @@ Use <-name>(array) to filter listed stacks (accepts wildcard '*')
     }
 }
 
-Set-Alias -Name als -Value Add-LocationToStack
-Set-Alias -Name rls -Value Remove-LocationFromStack
-Set-Alias -Name shls -Value Show-LocationStack
-Set-Alias -Name sl -Value Switch-Location
-Set-Alias -Name ole -Value Open-LocationInExplorer
-Set-Alias -Name clrs -Value Clear-LocationStack
-Set-Alias -Name svls -Value Save-LocationStack
-Set-Alias -Name ols -Value Open-LocationStack
-Set-Alias -Name gls -Value Get-LocationStack
+function Remove-LocationStack {
+<#
+.SYNOPSIS
+Removes exported location stack from disk.
+.DESCRIPTION
+Use mandatory <-name> parameter to specify which stack file to delete (use 'default' to remove default stack).
+Parameter <-force> is required to avoid accidental removal of stack file.
+#>
 
-Export-ModuleMember -Function * -Alias *
+    param (
+        [string]$name = $(throw 'Mandatory parameter not provided: <name>.'),
+        [switch]$force
+    )
 
+    $ErrorActionPreference = 'Stop'
 
-# 1. export/import instead of save/load
-# 2. ability to delete location stacks on disk
+    if ($name -match '[^a-zA-Z0-9]') {
+        throw "Invalid name: '$name' (allowed characters: [a-zA-Z0-9])"
+    }
+
+    $save_directory = Join-Path (Split-Path $PROFILE) 'data'
+    $filepath = Join-Path $save_directory "locstack_$name`.json"
+
+    if (!(Test-Path $filepath)) {
+        Write-Warning "LocationStack '$name' not found on disk"
+        Write-Warning "Use Get-LocationStack to list available stacks."
+        break
+    }
+
+    if (!$force) {
+
+        Write-Warning "Found location stack '$name' on disk."
+        Write-Warning "To delete, re-run with <-force>."
+        break
+    }
+
+    Remove-Item $filepath -Force
+    Write-Host "Removed location stack '$name'"
+}
+
+try {
+    Set-Alias -Name als -Value Add-LocationToStack -Force -ErrorAction Stop
+    Set-Alias -Name rls -Value Remove-LocationFromStack -Force -ErrorAction Stop
+    Set-Alias -Name shls -Value Show-LocationStack -Force -ErrorAction Stop
+    Set-Alias -Name swl -Value Switch-Location -Force -ErrorAction Stop
+    Set-Alias -Name ole -Value Open-LocationInExplorer -Force -ErrorAction Stop
+    Set-Alias -Name clrs -Value Clear-LocationStack -Force -ErrorAction Stop
+    Set-Alias -Name els -Value Export-LocationStack -Force -ErrorAction Stop
+    Set-Alias -Name ils -Value Import-LocationStack -Force -ErrorAction Stop
+    Set-Alias -Name gls -Value Get-LocationStack -Force -ErrorAction Stop
+    Set-Alias -Name rmls -Value Remove-LocationStack -Force -ErrorAction Stop
+    Export-ModuleMember -Function * -Alias *
+}
+catch {
+    Write-Warning "<Import-module LocationStack> : Failed to update aliases for imported functions. Please run the following block to set aliases manually:"
+    Write-Host ''
+    Write-Host 'Set-Alias -Name als -Value Remove-LocationFromStack -Force'
+    Write-Host 'Set-Alias -Name rls -Value Add-LocationToStack -Force'
+    Write-Host 'Set-Alias -Name shls -Value Show-LocationStack -Force'
+    Write-Host 'Set-Alias -Name swl -Value Switch-Location -Force'
+    Write-Host 'Set-Alias -Name ole -Value Open-LocationInExplorer -Force'
+    Write-Host 'Set-Alias -Name clrs -Value Clear-LocationStack -Force'
+    Write-Host 'Set-Alias -Name els -Value Export-LocationStack -Force'
+    Write-Host 'Set-Alias -Name ils -Value Import-LocationStack -Force'
+    Write-Host 'Set-Alias -Name gls -Value Get-LocationStack -Force'
+    Write-Host 'Set-Alias -Name rmls -Value Remove-LocationStack -Force'
+    Write-Host ''
+    Write-Warning 'Use the following command to delete persistent aliases:'
+    Write-Host ''
+    Write-Host 'del alias:<alias_name> -Force'
+    Write-Host ''
+}
+
+Export-ModuleMember -Function *
