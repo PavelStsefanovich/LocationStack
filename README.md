@@ -9,14 +9,15 @@
 
 ### Installation
 ##### Powershell v.5.0+
+Powershell gallery: https://www.powershellgallery.com/packages/LocationStack
 1. From PowerShell console run command:<br>
-&gt;_ Install-Module -Name LocationStack
+&gt;_ Install-Module -Name LocationStack 
+
 
 ##### Powershell v.2.0+
-1. Download LocationStack.psm1 file:
-https://www.powershellgallery.com/packages/LocationStack/1.0.3/Content/LocationStack.psm1
+1. Download this repo and extract.
 2. From PowerShell console run command:<br>
-&gt;_ Import-Module <download_dir>/LocationStack.psm1
+&gt;_ Import-Module <extraction_dir>/LocationStack.psm1
 
 ### Notes
 
