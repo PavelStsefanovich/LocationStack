@@ -7,7 +7,18 @@
   - persistent location table (location record will remain after 'popping' and can be used again).
   - ability to export/import location stack hashtable into/from a file with custom name to maintain multiple stack tables.
 
-###Notes
+### Installation
+##### Powershell v.5.0+
+1. From PowerShell console run command:<br>
+&gt;_ Install-Module -Name LocationStack
+
+##### Powershell v.2.0+
+1. Download LocationStack.psm1 file:
+https://www.powershellgallery.com/packages/LocationStack/1.0.3/Content/LocationStack.psm1
+2. From PowerShell console run command:<br>
+&gt;_ Import-Module <download_dir>/LocationStack.psm1
+
+### Notes
 
   Open-source and free of charge. Feel free to modify.
   I&#39;ve written it for my own use, and it proved very helpful. Hoping that someone else will find it useful.
