@@ -13,7 +13,6 @@ Powershell gallery: https://www.powershellgallery.com/packages/LocationStack
 1. From PowerShell console run command:<br>
 &gt;_ Install-Module -Name LocationStack 
 
-
 ##### Powershell v.2.0+
 1. Download this repo and extract.
 2. From PowerShell console run command:<br>

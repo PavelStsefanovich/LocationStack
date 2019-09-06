@@ -255,19 +255,18 @@ https://github.com/PavelStsefanovich/LocationStack
         }
     }
 
-    if ($locations) {
-
-        foreach ($location in $locations) {
-
-            $Global:LocationStack.Values.GetEnumerator() |
-            ? {$_ -like $location} |
-            % {$locations_to_open += $_}
-        }
+    if (!$ids -and !$locations) {
+        $locations_to_open += $PWD.Path
     }
 
-    if (!$ids -and !$locations) {
-        $Global:LocationStack.Values.GetEnumerator() |
-        % {$locations_to_open += $_}
+    foreach ($location in $locations) {
+
+        if (Test-Path $location) {
+            $locations_to_open += $location
+        }
+        else {
+            Write-Warning "Location not found on disk: '$location'."
+        }
     }
 
     $opened_locations = @()
